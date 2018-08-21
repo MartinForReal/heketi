@@ -54,3 +54,7 @@ packagecover.out
 .tox
 *.log
 .envrc
+*.xml
+.idea/
+
+
