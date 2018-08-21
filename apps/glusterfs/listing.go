@@ -51,6 +51,24 @@ func ListCompleteBlockVolumes(tx *bolt.Tx) ([]string, error) {
 	return removeKeysFromList(v, p), nil
 }
 
+// ListCompleteSnapshots returns a list of snapshot ID strings for snapshots
+// that are not pending.
+func ListCompleteSnapshots(tx *bolt.Tx) ([]string, error) {
+	p, err := MapPendingSnapshots(tx)
+	if err != nil {
+		return []string{}, err
+	}
+	v, err := SnapshotList(tx)
+	if err != nil {
+		return []string{}, err
+	}
+	if len(p) == 0 {
+		// avoid extra copy loop
+		return v, nil
+	}
+	return removeKeysFromList(v, p), nil
+}
+
 // UpdateClusterInfoComplete updates the given ClusterInfoResponse object so
 // that it only contains references to complete volumes, etc.
 func UpdateClusterInfoComplete(tx *bolt.Tx, ci *api.ClusterInfoResponse) error {
@@ -86,6 +104,14 @@ func MapPendingVolumes(tx *bolt.Tx) (map[string]string, error) {
 func MapPendingBlockVolumes(tx *bolt.Tx) (map[string]string, error) {
 	return mapPendingItems(tx, func(op *PendingOperationEntry, a PendingOperationAction) bool {
 		return (op.Type == OperationCreateBlockVolume && a.Change == OpAddBlockVolume)
+	})
+}
+
+// MapPendingSnapshots returns a map of snapshot-id to pending-op-id or
+// an error if the db cannot be read.
+func MapPendingSnapshots(tx *bolt.Tx) (map[string]string, error) {
+	return mapPendingItems(tx, func(op *PendingOperationEntry, a PendingOperationAction) bool {
+		return (op.Type == OperationSnapshotVolume && a.Change == OpAddSnapshot)
 	})
 }
 
